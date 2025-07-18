@@ -4,6 +4,22 @@
 
 Smart Canvas is a visual workflow builder that lets you create complex AI workflows through an intuitive drag-and-drop interface. Connect LLMs, tools, databases, and APIs to build powerful automation workflows.
 
+## 🚀 **Complete AI Workflow Builder - Production Ready!**
+
+✨ **What makes Smart Canvas special:**
+- **Visual workflow builder** with drag & drop interface
+- **300+ tool integrations** via Composio (Gmail, Slack, GitHub, etc.)
+- **Real OAuth & API key authentication** - no mocks, no fallbacks
+- **AI-powered chat-to-workflow generation**
+- **LLM nodes** (OpenAI, Anthropic, Google Gemini)
+- **Agent nodes** with tool access
+- **Template system** for saving/sharing workflows
+- **Background customization** with animations
+- **Complete backend API** with FastAPI
+- **Production-ready** - ready to ship!
+
+🎯 **Open source MIT license** - community contributions welcome!
+
 ## ✨ Features
 
 ### 🎯 **Visual Workflow Builder**
