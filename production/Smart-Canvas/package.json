@@ -1,0 +1,68 @@
+{
+  "name": "smart-canvas",
+  "version": "1.0.0",
+  "description": "The most powerful open-source AI workflow builder with 300+ tool integrations",
+  "main": "app/page.tsx",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Frankenbuild-labs/Smart-Canvas.git"
+  },
+  "keywords": [
+    "ai",
+    "workflow",
+    "automation",
+    "visual-programming",
+    "llm",
+    "composio",
+    "react-flow",
+    "nextjs"
+  ],
+  "author": "Frankenbuild Labs",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@composio/core": "^0.1.8-alpha.0",
+    "@composio/langchain": "^0.1.8-alpha.0",
+    "@langchain/anthropic": "^0.3.20",
+    "@langchain/community": "^0.3.42",
+    "@langchain/core": "^0.3.55",
+    "@langchain/google-genai": "^0.2.8",
+    "@langchain/langgraph": "^0.2.74",
+    "@langchain/openai": "^0.5.10",
+    "@radix-ui/react-dialog": "^1.1.13",
+    "@radix-ui/react-label": "^2.1.6",
+    "@radix-ui/react-slot": "^1.2.2",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.49.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.509.0",
+    "motion": "^12.11.2",
+    "next": "15.3.2",
+    "react": "^18.3.1",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^18.3.1",
+    "react-joyride": "^3.0.0-7",
+    "react-markdown": "^10.1.0",
+    "reactflow": "^11.11.4",
+    "tailwind-merge": "^3.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "20.19.4",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.6.0",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.2.9",
+    "typescript": "5.8.3"
+  }
+}

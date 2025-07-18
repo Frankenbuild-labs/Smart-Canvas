@@ -1,0 +1,360 @@
+import React, { useRef, useEffect, useState, useCallback } from "react";
+
+interface FlowingGridBackgroundProps {
+  direction?: "right" | "left" | "up" | "down" | "diagonal";
+  speed?: number;
+  gridSize?: number;
+  primaryColor?: string;
+  secondaryColor?: string;
+  dotSize?: number;
+  lineWidth?: number;
+  className?: string;
+}
+
+interface Dot {
+  x: number;
+  y: number;
+  baseOpacity: number;
+  currentOpacity: number;
+  targetOpacity: number;
+  opacitySpeed: number;
+  baseRadius: number;
+  currentRadius: number;
+}
+
+interface GridLine {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  opacity: number;
+}
+
+const FlowingGridBackground: React.FC<FlowingGridBackgroundProps> = ({
+  direction = "diagonal",
+  speed = 0.5,
+  gridSize = 30,
+  primaryColor = "rgba(87, 220, 205, 0.6)",
+  secondaryColor = "rgba(87, 220, 205, 0.2)",
+  dotSize = 1.5,
+  lineWidth = 0.5,
+  className = "",
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameId = useRef<number | null>(null);
+  const gridOffset = useRef({ x: 0, y: 0 });
+  const dotsRef = useRef<Dot[]>([]);
+  const gridLinesRef = useRef<GridLine[]>([]);
+  const mousePositionRef = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const canvasSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  const INTERACTION_RADIUS = 80;
+  const INTERACTION_RADIUS_SQ = INTERACTION_RADIUS * INTERACTION_RADIUS;
+  const OPACITY_BOOST = 0.4;
+  const RADIUS_BOOST = 2;
+
+  const handleMouseMove = useCallback((event: globalThis.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      mousePositionRef.current = { x: null, y: null };
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const canvasX = event.clientX - rect.left;
+    const canvasY = event.clientY - rect.top;
+    mousePositionRef.current = { x: canvasX, y: canvasY };
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    mousePositionRef.current = { x: null, y: null };
+  }, []);
+
+  const createGridElements = useCallback(() => {
+    const { width, height } = canvasSizeRef.current;
+    if (width === 0 || height === 0) return;
+
+    const newDots: Dot[] = [];
+    const newLines: GridLine[] = [];
+    
+    const cols = Math.ceil(width / gridSize) + 2;
+    const rows = Math.ceil(height / gridSize) + 2;
+
+    // Create dots
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < rows; j++) {
+        const x = i * gridSize;
+        const y = j * gridSize;
+        const baseOpacity = Math.random() * 0.3 + 0.2;
+        
+        newDots.push({
+          x,
+          y,
+          baseOpacity,
+          currentOpacity: baseOpacity,
+          targetOpacity: baseOpacity,
+          opacitySpeed: (Math.random() * 0.003) + 0.001,
+          baseRadius: dotSize,
+          currentRadius: dotSize,
+        });
+      }
+    }
+
+    // Create horizontal lines
+    for (let j = 0; j <= rows; j++) {
+      const y = j * gridSize;
+      newLines.push({
+        x1: 0,
+        y1: y,
+        x2: width + gridSize,
+        y2: y,
+        opacity: 0.1,
+      });
+    }
+
+    // Create vertical lines
+    for (let i = 0; i <= cols; i++) {
+      const x = i * gridSize;
+      newLines.push({
+        x1: x,
+        y1: 0,
+        x2: x,
+        y2: height + gridSize,
+        opacity: 0.1,
+      });
+    }
+
+    dotsRef.current = newDots;
+    gridLinesRef.current = newLines;
+  }, [gridSize, dotSize]);
+
+  const handleResize = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const container = canvas.parentElement;
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
+
+    if (canvas.width !== width || canvas.height !== height ||
+        canvasSizeRef.current.width !== width || canvasSizeRef.current.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+      canvasSizeRef.current = { width, height };
+      createGridElements();
+    }
+  }, [createGridElements]);
+
+  const animateGrid = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    const dots = dotsRef.current;
+    const lines = gridLinesRef.current;
+    const { width, height } = canvasSizeRef.current;
+    const { x: mouseX, y: mouseY } = mousePositionRef.current;
+
+    if (!ctx || !dots || !lines || width === 0 || height === 0) {
+      animationFrameId.current = requestAnimationFrame(animateGrid);
+      return;
+    }
+
+    // Update grid offset based on direction
+    const effectiveSpeed = Math.max(speed, 0.1);
+    switch (direction) {
+      case "right":
+        gridOffset.current.x = (gridOffset.current.x - effectiveSpeed) % gridSize;
+        break;
+      case "left":
+        gridOffset.current.x = (gridOffset.current.x + effectiveSpeed) % gridSize;
+        break;
+      case "up":
+        gridOffset.current.y = (gridOffset.current.y + effectiveSpeed) % gridSize;
+        break;
+      case "down":
+        gridOffset.current.y = (gridOffset.current.y - effectiveSpeed) % gridSize;
+        break;
+      case "diagonal":
+        gridOffset.current.x = (gridOffset.current.x - effectiveSpeed) % gridSize;
+        gridOffset.current.y = (gridOffset.current.y - effectiveSpeed) % gridSize;
+        break;
+    }
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw grid lines
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = secondaryColor;
+    
+    lines.forEach((line) => {
+      const adjustedX1 = line.x1 + gridOffset.current.x;
+      const adjustedY1 = line.y1 + gridOffset.current.y;
+      const adjustedX2 = line.x2 + gridOffset.current.x;
+      const adjustedY2 = line.y2 + gridOffset.current.y;
+
+      if ((adjustedX1 >= -gridSize && adjustedX1 <= width + gridSize) ||
+          (adjustedY1 >= -gridSize && adjustedY1 <= height + gridSize)) {
+        ctx.globalAlpha = line.opacity;
+        ctx.beginPath();
+        ctx.moveTo(adjustedX1, adjustedY1);
+        ctx.lineTo(adjustedX2, adjustedY2);
+        ctx.stroke();
+      }
+    });
+
+    // Draw and animate dots
+    dots.forEach((dot) => {
+      // Update dot opacity animation
+      dot.currentOpacity += dot.opacitySpeed;
+      if (dot.currentOpacity >= dot.targetOpacity || dot.currentOpacity <= 0.1) {
+        dot.opacitySpeed = -dot.opacitySpeed;
+        dot.currentOpacity = Math.max(0.1, Math.min(dot.currentOpacity, 0.6));
+        dot.targetOpacity = Math.random() * 0.4 + 0.2;
+      }
+
+      const adjustedX = dot.x + gridOffset.current.x;
+      const adjustedY = dot.y + gridOffset.current.y;
+
+      // Check if dot is visible
+      if (adjustedX >= -gridSize && adjustedX <= width + gridSize &&
+          adjustedY >= -gridSize && adjustedY <= height + gridSize) {
+        
+        let interactionFactor = 0;
+        dot.currentRadius = dot.baseRadius;
+
+        // Mouse interaction
+        if (mouseX !== null && mouseY !== null) {
+          const dx = adjustedX - mouseX;
+          const dy = adjustedY - mouseY;
+          const distSq = dx * dx + dy * dy;
+
+          if (distSq < INTERACTION_RADIUS_SQ) {
+            const distance = Math.sqrt(distSq);
+            interactionFactor = Math.max(0, 1 - distance / INTERACTION_RADIUS);
+            interactionFactor = interactionFactor * interactionFactor;
+          }
+        }
+
+        const finalOpacity = Math.min(1, dot.currentOpacity + interactionFactor * OPACITY_BOOST);
+        dot.currentRadius = dot.baseRadius + interactionFactor * RADIUS_BOOST;
+
+        // Extract RGB values from primaryColor
+        const colorMatch = primaryColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        const r = colorMatch ? colorMatch[1] : '87';
+        const g = colorMatch ? colorMatch[2] : '220';
+        const b = colorMatch ? colorMatch[3] : '205';
+
+        ctx.globalAlpha = finalOpacity;
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.beginPath();
+        ctx.arc(adjustedX, adjustedY, dot.currentRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // Add flowing particle effect
+    const time = Date.now() * 0.001;
+    for (let i = 0; i < 5; i++) {
+      const x = (Math.sin(time + i) * width * 0.3) + width * 0.5;
+      const y = (Math.cos(time * 0.7 + i) * height * 0.3) + height * 0.5;
+      
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = primaryColor;
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Add gradient overlay for depth
+    const gradient = ctx.createRadialGradient(
+      width / 2, height / 2, 0,
+      width / 2, height / 2, Math.sqrt(width * width + height * height) / 2
+    );
+    gradient.addColorStop(0, "rgba(17, 17, 17, 0)");
+    gradient.addColorStop(0.7, "rgba(17, 17, 17, 0.1)");
+    gradient.addColorStop(1, "rgba(17, 17, 17, 0.3)");
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    animationFrameId.current = requestAnimationFrame(animateGrid);
+  }, [direction, speed, gridSize, primaryColor, secondaryColor, lineWidth, INTERACTION_RADIUS, INTERACTION_RADIUS_SQ, OPACITY_BOOST, RADIUS_BOOST]);
+
+  useEffect(() => {
+    handleResize();
+    const canvas = canvasRef.current;
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('resize', handleResize);
+    canvas?.addEventListener('mouseleave', handleMouseLeave);
+
+    animationFrameId.current = requestAnimationFrame(animateGrid);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      canvas?.removeEventListener('mouseleave', handleMouseLeave);
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, [handleResize, handleMouseMove, handleMouseLeave, animateGrid]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`w-full h-full border-none block ${className}`}
+      style={{ background: '#111111' }}
+    />
+  );
+};
+
+// Demo component showing the flowing grid background
+const FlowingGridDemo: React.FC = () => {
+  return (
+    <div className="relative w-full h-screen bg-background overflow-hidden">
+      {/* Flowing Grid Background */}
+      <div className="absolute inset-0 z-0">
+        <FlowingGridBackground
+          direction="diagonal"
+          speed={0.8}
+          gridSize={35}
+          primaryColor="rgba(12, 242, 160, 0.6)"
+          secondaryColor="rgba(12, 242, 160, 0.15)"
+          dotSize={2}
+          lineWidth={0.5}
+        />
+      </div>
+
+      {/* Content overlay */}
+      <div className="relative z-10 flex items-center justify-center h-full">
+        <div className="text-center text-white p-8 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
+          <h1 className="text-4xl font-bold mb-4 text-white">
+            ReactFlow Dynamic Background
+          </h1>
+          <p className="text-lg text-gray-300 mb-6">
+            Interactive flowing grid with mouse interaction effects
+          </p>
+          <div className="flex gap-4 justify-center">
+            <div className="px-4 py-2 bg-[#0CF2A0] text-black rounded-md font-semibold">
+              Primary Action
+            </div>
+            <div className="px-4 py-2 border border-white/30 text-white rounded-md">
+              Secondary Action
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional floating elements */}
+      <div className="absolute top-10 left-10 z-10">
+        <div className="w-3 h-3 bg-[#0CF2A0] rounded-full animate-pulse"></div>
+      </div>
+      <div className="absolute bottom-10 right-10 z-10">
+        <div className="w-2 h-2 bg-[#0CF2A0] rounded-full animate-pulse delay-1000"></div>
+      </div>
+    </div>
+  );
+};
+
+export default FlowingGridDemo;

@@ -1,0 +1,66 @@
+# Metatron Unified Backend Requirements
+
+# FastAPI Core
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+
+# Authentication & Security
+pyjwt>=2.8.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+slowapi>=0.1.9
+
+# AI Agent Framework
+pydantic-ai[gemini]>=0.0.14
+composio-core>=0.5.0
+flask>=2.3.0
+flask-cors>=4.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+pydantic>=2.0.0
+
+# Task Queue & Caching
+celery>=5.3.0
+redis>=4.6.0
+
+# Additional Utilities
+aiofiles>=23.2.1
+python-dateutil>=2.8.2
+typing-extensions>=4.8.0
+
+# Advanced AI Tools & Integrations
+playwright>=1.40.0
+wikipedia>=1.4.0
+# jina>=3.20.0  # Temporarily disabled due to dependency conflicts
+langchain>=0.1.0
+langchain-community>=0.0.20
+praw>=7.7.0  # Reddit API
+newsapi-python>=0.2.6  # News API
+youtube-transcript-api>=0.6.0
+pytube>=15.0.0
+pillow>=10.0.0
+opencv-python>=4.8.0
+moviepy>=1.0.3
+
+# Document Processing
+pypdf2>=3.0.0
+python-docx>=0.8.11
+openpyxl>=3.1.0
+
+# Web Scraping & Research
+beautifulsoup4>=4.12.0
+selenium>=4.15.0
+httpx>=0.25.0
+
+# Jina AI Integration
+aiohttp>=3.9.0
+
+# nanoPerplexityAI Dependencies
+googlesearch-python>=1.2.3
+openai>=1.0.0
+backoff>=2.2.1

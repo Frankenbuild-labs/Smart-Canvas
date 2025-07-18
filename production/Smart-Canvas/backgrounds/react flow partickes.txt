@@ -1,0 +1,304 @@
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import { motion, useMotionValue, useSpring } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+interface GridParticle {
+  x: number;
+  y: number;
+  baseX: number;
+  baseY: number;
+  vx: number;
+  vy: number;
+  alpha: number;
+  targetAlpha: number;
+  size: number;
+}
+
+interface FlowingGridBackgroundProps {
+  className?: string;
+  gridSize?: number;
+  particleSize?: number;
+  flowSpeed?: number;
+  mouseInfluence?: number;
+  color?: string;
+  backgroundColor?: string;
+  enableFlow?: boolean;
+  enableMouseInteraction?: boolean;
+}
+
+function useMousePosition() {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      setMousePosition({ x: event.clientX, y: event.clientY });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  return mousePosition;
+}
+
+const FlowingGridBackground: React.FC<FlowingGridBackgroundProps> = ({
+  className = "",
+  gridSize = 30,
+  particleSize = 1,
+  flowSpeed = 0.5,
+  mouseInfluence = 100,
+  color = "#3b82f6",
+  backgroundColor = "transparent",
+  enableFlow = true,
+  enableMouseInteraction = true,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const particlesRef = useRef<GridParticle[]>([]);
+  const animationRef = useRef<number>();
+  const mousePosition = useMousePosition();
+  const mouseRef = useRef({ x: 0, y: 0 });
+
+  const offsetX = useMotionValue(0);
+  const offsetY = useMotionValue(0);
+  const springX = useSpring(offsetX, { stiffness: 50, damping: 20 });
+  const springY = useSpring(offsetY, { stiffness: 50, damping: 20 });
+
+  const initializeParticles = useCallback((width: number, height: number) => {
+    const particles: GridParticle[] = [];
+    const cols = Math.ceil(width / gridSize);
+    const rows = Math.ceil(height / gridSize);
+
+    for (let i = 0; i <= cols; i++) {
+      for (let j = 0; j <= rows; j++) {
+        const x = i * gridSize;
+        const y = j * gridSize;
+        particles.push({
+          x,
+          y,
+          baseX: x,
+          baseY: y,
+          vx: (Math.random() - 0.5) * flowSpeed,
+          vy: (Math.random() - 0.5) * flowSpeed,
+          alpha: 0.3 + Math.random() * 0.4,
+          targetAlpha: 0.3 + Math.random() * 0.4,
+          size: particleSize + Math.random() * particleSize,
+        });
+      }
+    }
+    particlesRef.current = particles;
+  }, [gridSize, flowSpeed, particleSize]);
+
+  const updateMousePosition = useCallback(() => {
+    if (containerRef.current && enableMouseInteraction) {
+      const rect = containerRef.current.getBoundingClientRect();
+      mouseRef.current = {
+        x: mousePosition.x - rect.left,
+        y: mousePosition.y - rect.top,
+      };
+    }
+  }, [mousePosition, enableMouseInteraction]);
+
+  const animate = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const { width, height } = canvas;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Update and draw particles
+    particlesRef.current.forEach((particle) => {
+      // Flow animation
+      if (enableFlow) {
+        particle.vx += (Math.random() - 0.5) * 0.01;
+        particle.vy += (Math.random() - 0.5) * 0.01;
+        
+        // Damping
+        particle.vx *= 0.99;
+        particle.vy *= 0.99;
+        
+        // Update position
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        
+        // Boundary wrapping
+        if (particle.x < -gridSize) particle.x = width + gridSize;
+        if (particle.x > width + gridSize) particle.x = -gridSize;
+        if (particle.y < -gridSize) particle.y = height + gridSize;
+        if (particle.y > height + gridSize) particle.y = -gridSize;
+      }
+
+      // Mouse interaction
+      if (enableMouseInteraction) {
+        const dx = mouseRef.current.x - particle.x;
+        const dy = mouseRef.current.y - particle.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < mouseInfluence) {
+          const force = (mouseInfluence - distance) / mouseInfluence;
+          particle.vx -= (dx / distance) * force * 0.5;
+          particle.vy -= (dy / distance) * force * 0.5;
+          particle.targetAlpha = Math.min(1, particle.alpha + force * 0.5);
+        } else {
+          particle.targetAlpha = 0.3 + Math.random() * 0.4;
+        }
+      }
+
+      // Update alpha
+      particle.alpha += (particle.targetAlpha - particle.alpha) * 0.1;
+
+      // Draw particle
+      ctx.save();
+      ctx.globalAlpha = particle.alpha;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Draw connections to nearby particles
+      particlesRef.current.forEach((otherParticle) => {
+        if (particle === otherParticle) return;
+        
+        const dx = particle.x - otherParticle.x;
+        const dy = particle.y - otherParticle.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < gridSize * 1.5) {
+          const opacity = (1 - distance / (gridSize * 1.5)) * 0.2;
+          ctx.save();
+          ctx.globalAlpha = opacity * Math.min(particle.alpha, otherParticle.alpha);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(particle.x, particle.y);
+          ctx.lineTo(otherParticle.x, otherParticle.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+    });
+
+    animationRef.current = requestAnimationFrame(animate);
+  }, [color, enableFlow, enableMouseInteraction, mouseInfluence, gridSize]);
+
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = `${rect.width}px`;
+    canvas.style.height = `${rect.height}px`;
+    
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+    }
+
+    initializeParticles(rect.width, rect.height);
+  }, [initializeParticles]);
+
+  useEffect(() => {
+    updateMousePosition();
+  }, [updateMousePosition]);
+
+  useEffect(() => {
+    resizeCanvas();
+    animate();
+
+    const handleResize = () => resizeCanvas();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [resizeCanvas, animate]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!enableMouseInteraction) return;
+    
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const newOffsetX = (x - centerX) * 0.02;
+    const newOffsetY = (y - centerY) * 0.02;
+    
+    offsetX.set(newOffsetX);
+    offsetY.set(newOffsetY);
+  }, [enableMouseInteraction, offsetX, offsetY]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn("relative w-full h-full overflow-hidden", className)}
+      style={{ backgroundColor }}
+      onMouseMove={handleMouseMove}
+    >
+      <motion.div
+        style={{ x: springX, y: springY }}
+        className="absolute inset-0"
+      >
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ mixBlendMode: "screen" }}
+        />
+      </motion.div>
+      
+      {/* Gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/10 pointer-events-none" />
+      
+      {/* Radial gradient to soften edges */}
+      <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-black/20 pointer-events-none" />
+    </div>
+  );
+};
+
+// Usage example
+export default function ReactFlowDynamicBackground() {
+  return (
+    <div className="relative w-full h-screen bg-background overflow-hidden">
+      <FlowingGridBackground
+        className="absolute inset-0"
+        gridSize={40}
+        particleSize={2}
+        flowSpeed={0.3}
+        mouseInfluence={120}
+        color="#3b82f6"
+        backgroundColor="hsl(var(--background))"
+        enableFlow={true}
+        enableMouseInteraction={true}
+      />
+      
+      {/* Content overlay */}
+      <div className="relative z-10 flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl md:text-6xl font-bold text-foreground">
+            ReactFlow Interface
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-md mx-auto">
+            Dynamic grid background with flowing particles and interactive mouse effects
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
