@@ -28,8 +28,9 @@ Smart Canvas is a visual workflow builder that lets you create complex AI workfl
 
 ## ✨ Features
 
-### 🎯 **Visual Workflow Builder**
+### 🎯 **Visual Agent & Workflow Builder**
 - **Drag & Drop Interface** - Build workflows visually with nodes and connections
+- **NO CODE AGENT OR WORK FLOW BUILDER**  simply say what you want and it will build it and assign the connections and tools
 - **Real-time Execution** - See your workflows run in real-time with visual feedback
 - **Template System** - Save and share workflow templates
 - **Background Customization** - Beautiful animated backgrounds
