@@ -1,4 +1,9 @@
 # 🎨 Smart Canvas - AI Workflow Builder
+![Screenshot 2025-07-18 115120](https://github.com/user-attachments/assets/28e700a2-4b14-4311-a518-f3f6163d56f7)
+![Screenshot 2025-07-18 120125](https://github.com/user-attachments/assets/a39b295f-2eef-4874-97c8-a26bcc01d08d)
+![Screenshot 2025-07-18 120201](https://github.com/user-attachments/assets/989ba687-6252-456d-bbb2-0ec67f03f8cd)
+
+
 
 **The most powerful open-source AI workflow builder with 300+ tool integrations**
 
